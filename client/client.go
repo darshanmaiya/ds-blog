@@ -6,17 +6,30 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"strconv"
 	"strings"
 
-	"github.com/darshanmaiya/ds-blog/server"
+	"bitbucket.org/darshanmaiya/ds-blog/config"
+	"bitbucket.org/darshanmaiya/ds-blog/server"
 )
 
-func parseServers() {
-
-}
+var allServers map[int]string
+var client *rpc.Client
 
 func main() {
 	fmt.Println("Welcome to DS-Blog by Syncinators.\nType 'help' for a list of supported commands.\n")
+
+	fmt.Println("Initializing available servers. Please wait...")
+
+	var err error
+	allServers, err = config.GetServersFromConfig()
+
+	if err != nil {
+		os.Exit(1)
+	}
+
+	fmt.Println("Servers initialized successfully.")
+	listServers(allServers)
 
 	for {
 		consoleReader := bufio.NewReader(os.Stdin)
@@ -30,7 +43,7 @@ func main() {
 
 		input := strings.Split(command, " ")
 
-		client, err := rpc.DialHTTP("tcp", "127.0.0.1:50000")
+		/*client, err := rpc.DialHTTP("tcp", "127.0.0.1:50000")
 		if err != nil {
 			log.Fatal("dialing:", err)
 		}
@@ -40,16 +53,41 @@ func main() {
 		if err != nil {
 			log.Fatal("arith error:", err)
 		}
-		fmt.Printf("Arith: %d*%d=%d", args.A, args.B, reply)
+		fmt.Printf("Arith: %d*%d=%d", args.A, args.B, reply)*/
 
 		switch strings.ToLower(input[0]) {
+		case "connect":
+			var serverId int
+			serverId, err = strconv.Atoi(input[1])
+			fmt.Printf("Connecting to server %d at %s, please wait...\n", serverId, allServers[serverId])
+			err = connectToServer(serverId)
+
+			if err != nil {
+				fmt.Println("Connecting to server failed")
+			} else {
+				fmt.Println("Connected")
+			}
 		case "post":
 			message := command[5:len(command)]
-			//postMessage(message)
-			fmt.Printf("Message posted: %s\n", message)
+			args := &server.PostArgs{
+				Message: message,
+			}
+			reply := server.PostReply{}
+			err = client.Call("Server.PostMessage", args, &reply)
+			if err != nil {
+				log.Fatal("Server error:", err)
+			}
+			fmt.Printf("Server replied: %s\n", reply.Reply)
 
 		case "lookup":
-			//lookup()
+			args := &server.LookupArgs{}
+			reply := server.LookupReply{}
+			err = client.Call("Server.Lookup", args, &reply)
+			if err != nil {
+				log.Fatal("Server error:", err)
+			}
+			fmt.Println("Total number of messages in server: ", len(reply.Messages))
+			printLogMessages(reply.Messages)
 
 		case "sync":
 		/*	fromServerID, err := strconv.Atoi(input[1])
@@ -81,5 +119,32 @@ func main() {
 			fmt.Println("\nDS-Blog shutting down...\nBye :)")
 			os.Exit(0)
 		}
+	}
+}
+
+func listServers(serversList map[int]string) {
+	fmt.Println("Available servers are:\n")
+
+	for i, value := range serversList {
+		fmt.Printf("Server %d @ %s\n", i, value)
+	}
+	fmt.Println()
+}
+
+func connectToServer(serverID int) error {
+	var err error
+	client, err = rpc.DialHTTP("tcp", allServers[serverID])
+
+	if err != nil {
+		log.Fatal("dialing: ", err)
+		return err
+	}
+
+	return nil
+}
+
+func printLogMessages(messages []server.LogMsg) {
+	for _, value := range messages {
+		fmt.Printf("ID: %d, Message: \"%s\"\n", value.ID, value.Message)
 	}
 }
