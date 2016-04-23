@@ -59,7 +59,7 @@ func (server Server) PostMessage(args *PostArgs, reply *PostReply) error {
 
 	server.Log = append(server.Log, logMsg)
 
-	reply.Reply = "Success. Total number of messages is " + strconv.Itoa(len(server.Log))
+	reply.Reply = "Success. Total number of messages is: " + strconv.Itoa(len(server.Log))
 
 	return nil
 }

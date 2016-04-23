@@ -41,7 +41,6 @@ func main() {
 	fmt.Println()
 
 	now := time.Now().UTC()
-	fmt.Println("** Started server ", serverID, " at: ", now.Format(time.UnixDate), "**")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -61,6 +60,7 @@ func main() {
 	}
 	go http.Serve(listener, nil)
 
+	fmt.Println("** Started server ", serverID, " at: ", now.Format(time.UnixDate), "**")
 	for {
 
 	}
